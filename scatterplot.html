@@ -90,7 +90,7 @@ d3.csv("walmarts-combined.csv", function(error, data) {
   // change string (from CSV) into number format
   data.forEach(function(d) {
     d.density = +d.density;
-    d["all-pop"] = +d["all-pop"];
+    d["all-poverty"] = +d["all-poverty"];
 //    console.log(d);
   });
 
@@ -108,7 +108,7 @@ d3.csv("walmarts-combined.csv", function(error, data) {
       .attr("x", width)
       .attr("y", -6)
       .style("text-anchor", "end")
-      .text("density");
+      .text("density (people/sq-mi)");
 
   // y-axis
   svg.append("g")
@@ -120,7 +120,7 @@ d3.csv("walmarts-combined.csv", function(error, data) {
       .attr("y", 6)
       .attr("dy", ".71em")
       .style("text-anchor", "end")
-      .text("all-pop");
+      .text("% pop in poverty");
 
   // draw dots
   svg.selectAll(".dot")
