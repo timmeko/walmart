@@ -7,45 +7,72 @@
 
 <style>
 body {
-  font: 11px sans-serif;
+    color: #2a2a2a;
+    font-family: "FranklinITCProLight", Helvetica, Arial, sans-serif;
+    font-size: 14px;
 }
-
 .axis path,
 .axis line {
   fill: none;
-  stroke: #000;
+  stroke: none;
   shape-rendering: crispEdges;
 }
 
+.x-axis .domain {
+  fill: none;
+  stroke: #000;
+  shape-rendering: crispEdges;
+  z-index: 1500;
+}
+
 .dot {
-  /*stroke: #000;*/
+  fill: #fff;
+  opacity: 1;
+}
+
+.dot:hover{
+  fill-opacity:1;
 }
 
 .closing{
-  fill: #1696d2;
+  stroke: #006F91;
+  fill-opacity:0.1;
   z-index: 1000;
 }
 
 .open{
-  fill:#efefef; 
+  fill:#ccc; 
 }
 
 .Express{
-  fill:red;
+  stroke:#EE645C;
 }
 
 .tooltip {
   position: absolute;
   width: 200px;
-  height: 28px;
+  height: auto;
   pointer-events: none;
+  background-color: rgba(255,255,255,0.8);
 }
+
+.grid .tick {
+    stroke: #ececec;
+    opacity: 0.7;
+}
+.grid path {
+      stroke-width: 0;
+}
+
+
+
+
 </style>
 <body>
 <script src="http://d3js.org/d3.v3.min.js"></script>
 
 <script>
-var margin = {top: 20, right: 20, bottom: 30, left: 40},
+var margin = {top: 20, right: 20, bottom: 40, left: 40},
     width = 960 - margin.left - margin.right,
     height = 500 - margin.top - margin.bottom;
 
@@ -57,16 +84,17 @@ var margin = {top: 20, right: 20, bottom: 30, left: 40},
  */ 
 
 // setup x 
-var xValue = function(d) { return d.density;}, // data -> value
+var xValue = function(d) { return d["density"];}, // data -> value
     xScale = d3.scale.linear().range([0, width]), // value -> display
     xMap = function(d) { return xScale(xValue(d));}, // data -> display
     xAxis = d3.svg.axis().scale(xScale).orient("bottom");
 
 // setup y
-var yValue = function(d) { return d["PPCHG"];}, // data -> value
+var yValue = function(d) { return d["all-poverty"];}, // data -> value
     yScale = d3.scale.linear().range([height, 0]), // value -> display
     yMap = function(d) { return yScale(yValue(d));}, // data -> display
     yAxis = d3.svg.axis().scale(yScale).orient("left");
+
 
 // setup fill color
 var cValue = function(d) { return d.Type;},
@@ -89,27 +117,38 @@ d3.csv("walmarts-pop.csv", function(error, data) {
 
   // change string (from CSV) into number format
   data.forEach(function(d) {
-    d.density = +d.density;
-    d["PPCHG"] = +d["PPCHG"];
+    d["all-poverty"] = +d["all-poverty"];
+    d["density"] = +d["density"];
 //    console.log(d);
   });
 
   // don't want dots overlapping axis, so add in buffer to data domain
-  xScale.domain([d3.min(data, xValue)-1, d3.max(data, xValue)+1]);
+  // xScale.domain([d3.min(data, xValue)-1, d3.max(data, xValue)+1]);
   // yScale.domain([d3.min(data, yValue)-1, d3.max(data, yValue)+1]);
-  yScale.domain([-100, 100]);
+
+  //removing the offset
+   xScale.domain([d3.min(data, xValue), d3.max(data, xValue)]);
+  yScale.domain([d3.min(data, yValue), d3.max(data, yValue)]);
+  // yScale.domain([-100, 100]);
 
   // x-axis
   svg.append("g")
-      .attr("class", "x axis")
+      .attr("class", "x axis x-axis")
       .attr("transform", "translate(0," + height + ")")
       .call(xAxis)
     .append("text")
       .attr("class", "label")
-      .attr("x", width)
-      .attr("y", -6)
-      .style("text-anchor", "end")
-      .text("density (people/sq-mi)");
+      .attr("x", width/2)
+      .attr("y", 36)
+      .style("text-anchor", "middle")
+      .text("Tract population density (people per square mile)");
+
+      svg.append("g")         
+        .attr("class", "grid")
+        .call(xAxis
+            .tickSize(height, 0, 0)
+            .tickFormat("")
+        );
 
   // y-axis
   svg.append("g")
@@ -117,27 +156,35 @@ d3.csv("walmarts-pop.csv", function(error, data) {
       .call(yAxis)
     .append("text")
       .attr("class", "label")
-      .attr("transform", "rotate(-90)")
-      .attr("y", 6)
+      // .attr("transform", "rotate(-90)")
+      .attr("y", -16)
+      .attr("x", -25)
       .attr("dy", ".71em")
-      .style("text-anchor", "end")
-      .text("% pop change");
+      .style("text-anchor", "left")
+      .text("Share of population in poverty");
+
+      svg.append("g")         
+        .attr("class", "grid")
+        .call(yAxis
+            .tickSize(-width, 0, 0)
+            .tickFormat("")
+        );
 
   // draw dots
   svg.selectAll(".dot")
       .data(data)
     .enter().append("circle")
       .attr("class", "dot")
-      .attr("r", 1.5)
+      .attr("r", function(d){if (d.closing == 1){return 4;} else{return 1;}})
       .attr("cx", xMap)
       .attr("cy", yMap)
       // .style("fill", function(d) { return color(cValue(d));})
-      .attr("class", function(d) { if (d.closing == 1){ return "closing " + d.Type;} else{ return "open " + d.Type;}}) 
+      .attr("class", function(d) { if (d.closing == 1){ return "dot closing " + d.Type;} else{ return "dot open " + d.Type;}}) 
       .on("mouseover", function(d) {
           tooltip.transition()
                .duration(200)
                .style("opacity", .9);
-          tooltip.html( d.Type + "<br/>" + d["Wal-Mart-all"] + "<br/> density (people/sq-mi): " + xValue(d) + "<br/>% pop change: " + yValue(d))
+          tooltip.html( d.Type + "<br/>" + d["Wal-Mart-all"] + "<br/> density: " + xValue(d) + "<br/>% poverty: " + yValue(d))
                .style("left", (d3.event.pageX + 5) + "px")
                .style("top", (d3.event.pageY - 28) + "px");
       })
@@ -168,6 +215,8 @@ d3.csv("walmarts-pop.csv", function(error, data) {
       .attr("dy", ".35em")
       .style("text-anchor", "end")
       .text(function(d) { return d;})
+
+
 });
 
 </script>
